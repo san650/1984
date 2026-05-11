@@ -1,0 +1,311 @@
+:root {
+  --bg: #0F1B33;
+  --bg-2: #16223D;
+  --fg: #F0E6D2;
+  --muted: #8C9AB8;
+  --accent: #D4AF6F;
+  --danger: #E37464;
+  --success: #6FD49B;
+  --col: min(100% - 2rem, 480px);
+  --gutter: 1rem;
+  --radius: 12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100dvh;
+  padding-top: max(var(--gutter), env(safe-area-inset-top));
+  padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+}
+
+main {
+  width: var(--col);
+  margin-inline: auto;
+}
+
+button {
+  min-height: 44px;
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #1a1505;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  transition: opacity 0.15s ease;
+}
+
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+button.ghost {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid rgba(240,230,210,0.25);
+}
+
+button.danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(227,116,100,0.4);
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.muted { color: var(--muted); }
+
+/* ---------- top bar + tabs ---------- */
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-2);
+  padding: 4px;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  flex: 1;
+  min-height: 38px;
+  background: transparent;
+  color: var(--muted);
+  border-radius: calc(var(--radius) - 4px);
+  font-weight: 500;
+}
+
+.tabs button.active {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* ---------- scan view ---------- */
+
+.scan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.viewfinder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.viewfinder video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.viewfinder.idle::after {
+  content: 'Tap Start to begin';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* Reticle: a bright outlined target box centered horizontally
+   at mid-height. Surrounded by a darkening mask so the user can
+   tell exactly which slice of the frame is being OCR'd. */
+.reticle {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: 22%;
+  transform: translateY(-50%);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.45),
+    0 0 12px rgba(212, 175, 111, 0.45) inset;
+  animation: reticle-pulse 1.6s ease-in-out infinite;
+}
+
+.reticle .corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--accent);
+}
+.reticle .corner.tl { top: -3px; left: -3px; border-right: none; border-bottom: none; border-top-left-radius: 8px; }
+.reticle .corner.tr { top: -3px; right: -3px; border-left: none; border-bottom: none; border-top-right-radius: 8px; }
+.reticle .corner.bl { bottom: -3px; left: -3px; border-right: none; border-top: none; border-bottom-left-radius: 8px; }
+.reticle .corner.br { bottom: -3px; right: -3px; border-left: none; border-top: none; border-bottom-right-radius: 8px; }
+
+.reticle .hint {
+  position: absolute;
+  top: -1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(15, 27, 51, 0.7);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+@keyframes reticle-pulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 12px rgba(212, 175, 111, 0.35) inset; }
+  50%      { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 18px rgba(212, 175, 111, 0.65) inset; }
+}
+
+.status {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+  min-height: 1.4em;
+}
+
+.status.flash {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.controls button { flex: 1; }
+
+.last-capture {
+  background: var(--bg-2);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.last-capture .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+.last-capture .isbn {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+}
+
+/* ---------- list view ---------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.list .empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 2rem 1rem;
+  background: var(--bg-2);
+  border-radius: var(--radius);
+}
+
+.row {
+  background: var(--bg-2);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.row .code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+}
+
+.row .time {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.row .info { display: flex; flex-direction: column; min-width: 0; }
+
+.row .x {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 1.2rem;
+  min-height: 32px;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+}
+
+.row .x:hover { color: var(--danger); }
+
+.list-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.list-actions button { flex: 1; }
+
+.toast {
+  position: fixed;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--success);
+  color: #062317;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  z-index: 50;
+  animation: toast 1.8s ease forwards;
+}
+
+@keyframes toast {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  10%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}

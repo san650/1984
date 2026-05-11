@@ -1,0 +1,20 @@
+{
+  "name": "ISBNGrab",
+  "short_name": "ISBNGrab",
+  "description": "Scan ISBN-10 and ISBN-13 from book covers using your phone camera, store them locally, and export to JSON.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F1B33",
+  "theme_color": "#0F1B33",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
