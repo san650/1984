@@ -1,4 +1,4 @@
-const CACHE = 'isbngrab-v1';
+const CACHE = 'isbngrab-v3';
 
 const SHELL = [
   './',
@@ -12,6 +12,7 @@ const SHELL = [
   './db.js',
   './isbn.js',
   './ocr.js',
+  './openlibrary.js',
   './icon.svg',
   './splash/splash-1290x2796.png',
   './splash/splash-1284x2778.png',
@@ -28,6 +29,10 @@ const SHELL = [
   './vendor/tesseract/tesseract-core.wasm',
   './vendor/tesseract/tesseract-core-simd.wasm.js',
   './vendor/tesseract/tesseract-core-simd.wasm',
+  './vendor/tesseract/tesseract-core-lstm.wasm.js',
+  './vendor/tesseract/tesseract-core-lstm.wasm',
+  './vendor/tesseract/tesseract-core-simd-lstm.wasm.js',
+  './vendor/tesseract/tesseract-core-simd-lstm.wasm',
   './vendor/tesseract/eng.traineddata.gz',
 ];
 

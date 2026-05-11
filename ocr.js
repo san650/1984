@@ -60,6 +60,8 @@ export class IsbnScanner {
     this.timer = setInterval(() => this.#tick(), SCAN_INTERVAL_MS);
   }
 
+  // stop() releases the camera but keeps the Tesseract worker alive
+  // so the next start() is instant. Use destroy() to fully tear down.
   async stop() {
     this.running = false;
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
@@ -68,6 +70,10 @@ export class IsbnScanner {
       this.stream = null;
     }
     if (this.video) this.video.srcObject = null;
+  }
+
+  async destroy() {
+    await this.stop();
     if (this.worker) {
       try { await this.worker.terminate(); } catch {}
       this.worker = null;
@@ -84,8 +90,12 @@ export class IsbnScanner {
       gzip: true,
     });
     await this.worker.setParameters({
-      tessedit_char_whitelist: '0123456789X-',
-      tessedit_pageseg_mode: '7', // single text line
+      // Allow the letters "ISBN" + check digit X so Tesseract can read
+      // the "ISBN" prefix the user is aiming at. Lowercase + look-alike
+      // letters (l, O, etc.) are intentionally excluded so the engine
+      // prefers digits where the glyph is ambiguous.
+      tessedit_char_whitelist: 'ISBNX0123456789-: .',
+      tessedit_pageseg_mode: '6', // uniform block of text — handles multi-line
     });
   }
 
