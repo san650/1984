@@ -37,7 +37,7 @@ export class IsbnScanner {
   async start() {
     if (this.running) return;
     this.running = true;
-    this.onStatus('Requesting camera…');
+    this.onStatus('REQUESTING TELESCREEN ACCESS...');
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -45,7 +45,7 @@ export class IsbnScanner {
       });
     } catch (err) {
       this.running = false;
-      this.onStatus(`Camera blocked: ${err.message || err.name}`);
+      this.onStatus(`TELESCREEN BLOCKED: ${(err.message || err.name).toUpperCase()}`);
       throw err;
     }
     this.video.srcObject = this.stream;
@@ -53,10 +53,10 @@ export class IsbnScanner {
     this.video.muted = true;
     await this.video.play().catch(() => {});
 
-    this.onStatus('Loading OCR engine…');
+    this.onStatus('CALIBRATING OPTICS...');
     await this.#ensureWorker();
 
-    this.onStatus('Point at the ISBN');
+    this.onStatus('AWAITING TARGET');
     this.timer = setInterval(() => this.#tick(), SCAN_INTERVAL_MS);
   }
 
@@ -138,12 +138,13 @@ export class IsbnScanner {
       if (!this.running) return;
       const isbn = extractIsbn(data.text || '');
       if (isbn) {
-        this.onStatus(`Found ${isbn}`);
+        this.onStatus(`ACQUIRED: ${isbn}`);
         this.onResult(isbn);
       } else if (data.text?.trim()) {
-        this.onStatus(`Reading: ${data.text.trim().slice(0, 32)}…`);
+        const snippet = data.text.trim().replace(/\s+/g, ' ').slice(0, 28);
+        this.onStatus(`INTERCEPT: ${snippet}...`);
       } else {
-        this.onStatus('Point at the ISBN');
+        this.onStatus('AWAITING TARGET');
       }
     } catch (err) {
       console.error('OCR error', err);

@@ -1,22 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#0F1B33"/>
-  <!-- Barcode bars, centered in the maskable safe zone -->
-  <g fill="#D4AF6F">
-    <rect x="40"  y="60" width="6"  height="80"/>
-    <rect x="52"  y="60" width="3"  height="80"/>
-    <rect x="61"  y="60" width="8"  height="80"/>
-    <rect x="75"  y="60" width="4"  height="80"/>
-    <rect x="85"  y="60" width="6"  height="80"/>
-    <rect x="97"  y="60" width="3"  height="80"/>
-    <rect x="106" y="60" width="8"  height="80"/>
-    <rect x="120" y="60" width="4"  height="80"/>
-    <rect x="130" y="60" width="5"  height="80"/>
-    <rect x="141" y="60" width="3"  height="80"/>
-    <rect x="150" y="60" width="8"  height="80"/>
-  </g>
-  <!-- ISBN label band -->
-  <rect x="36" y="150" width="128" height="14" rx="3" fill="#D4AF6F"/>
-  <text x="100" y="161" text-anchor="middle"
-        font-family="Georgia, serif" font-size="11" font-weight="700"
-        fill="#0F1B33" letter-spacing="2">ISBN</text>
+  <rect width="200" height="200" fill="#0a0a09"/>
+  <!-- Outer eye almond -->
+  <path d="M 25 100 Q 100 25, 175 100 Q 100 175, 25 100 Z"
+        fill="#0a0a09" stroke="#e9e2d0" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Iris -->
+  <circle cx="100" cy="100" r="34" fill="#e9e2d0"/>
+  <!-- Pupil -->
+  <circle cx="100" cy="100" r="16" fill="#0a0a09"/>
+  <!-- Party-red glint -->
+  <circle cx="100" cy="100" r="5" fill="#c8302a"/>
+  <!-- Tear-duct ticks -->
+  <rect x="14" y="98" width="10" height="4" fill="#e9e2d0"/>
+  <rect x="176" y="98" width="10" height="4" fill="#e9e2d0"/>
 </svg>

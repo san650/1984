@@ -1,4 +1,4 @@
-const CACHE = 'isbngrab-v3';
+const CACHE = '1984-v2';
 
 const SHELL = [
   './',
@@ -13,6 +13,10 @@ const SHELL = [
   './isbn.js',
   './ocr.js',
   './openlibrary.js',
+  './fonts/fonts.css',
+  './fonts/black-ops-one-latin-400-normal.woff2',
+  './fonts/jetbrains-mono-latin-400-normal.woff2',
+  './fonts/jetbrains-mono-latin-700-normal.woff2',
   './icon.svg',
   './splash/splash-1290x2796.png',
   './splash/splash-1284x2778.png',

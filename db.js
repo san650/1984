@@ -1,4 +1,4 @@
-const DB_NAME = 'isbngrab';
+const DB_NAME = '1984';
 const DB_VERSION = 1;
 const STORE = 'state';
 const DOC_KEY = 'app';

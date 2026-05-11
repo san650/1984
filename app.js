@@ -20,16 +20,11 @@ const getVideoEl = () => {
   return videoEl;
 };
 
-// Scan-tab phases:
-//   idle      – nothing happening, "Start camera" button
-//   scanning  – camera live, OCR ticking, reticle drawn, "Stop" button
-//   lookup    – ISBN captured, camera stopped, fetching Open Library metadata
-//   result    – metadata resolved (or null), book card + "Scan another" button
 const ui = {
   tab: 'scan',
-  phase: 'idle',
+  phase: 'idle', // idle | scanning | lookup | result
   scanner: null,
-  status: 'Tap Start to begin',
+  status: 'TELESCREEN STANDBY',
   lastCapture: null,
   lastWasDuplicate: false,
   selectedScan: null,
@@ -44,6 +39,8 @@ const fmtTime = (t) => {
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
+
+const fmtDossierRef = (n) => String(n).padStart(4, '0');
 
 // Tiny DOM builder. No innerHTML; all dynamic strings become text nodes.
 const h = (tag, props = {}, ...children) => {
@@ -69,18 +66,38 @@ const h = (tag, props = {}, ...children) => {
   return el;
 };
 
+// SVG builder for the all-seeing-eye brand mark.
+const svgEye = () => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'eye');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('aria-hidden', 'true');
+  const mk = (tag, attrs) => {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    return n;
+  };
+  svg.appendChild(mk('path', {
+    d: 'M 6 50 Q 50 6, 94 50 Q 50 94, 6 50 Z',
+    fill: 'none', stroke: 'currentColor', 'stroke-width': '5', 'stroke-linejoin': 'round',
+  }));
+  svg.appendChild(mk('circle', { cx: '50', cy: '50', r: '18', fill: 'currentColor' }));
+  svg.appendChild(mk('circle', { cx: '50', cy: '50', r: '8', fill: 'var(--bg)' }));
+  svg.appendChild(mk('circle', { cx: '50', cy: '50', r: '2.5', fill: 'var(--alert)' }));
+  return svg;
+};
+
 const showToast = (msg) => {
   ui.toast = msg;
   render();
   setTimeout(() => {
     if (ui.toast === msg) { ui.toast = null; render(); }
-  }, 1800);
+  }, 2000);
 };
 
 const vibrate = (pattern) => {
-  if (navigator.vibrate) {
-    try { navigator.vibrate(pattern); } catch {}
-  }
+  if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch {} }
 };
 
 const ensureScanner = () => {
@@ -103,22 +120,20 @@ const onIsbnDetected = async (isbn) => {
 
   vibrate(120);
 
-  // Already in the list? Surface the existing entry, don't dispatch
-  // or hit Open Library again.
   const existing = store.state.scans.find((s) => s.isbn === isbn);
   if (existing) {
     if (ui.scanner) await ui.scanner.stop();
     ui.lastCapture = existing;
     ui.lastWasDuplicate = true;
     ui.phase = 'result';
-    showToast(`Already in list: ${existing.meta?.title || isbn}`);
+    showToast(`ON RECORD: ${existing.meta?.title || isbn}`);
     render();
     return;
   }
 
   ui.lastWasDuplicate = false;
   ui.phase = 'lookup';
-  ui.status = `Looking up ${isbn}…`;
+  ui.status = `CROSS-REFERENCING ${isbn}...`;
   if (ui.scanner) await ui.scanner.stop();
   render();
 
@@ -128,14 +143,14 @@ const onIsbnDetected = async (isbn) => {
   store.dispatch(makeCommand('ADD_SCAN', { from: null, to: entry }));
   ui.lastCapture = entry;
   ui.phase = 'result';
-  showToast(meta ? `Saved ${entry.meta.title || isbn}` : `Saved ${isbn}`);
+  showToast(meta ? `FILED: ${entry.meta.title || isbn}` : `FILED: ${isbn}`);
   render();
 };
 
 const startScanning = async () => {
   if (ui.phase === 'scanning' || ui.phase === 'lookup') return;
   ui.phase = 'scanning';
-  ui.status = 'Starting camera…';
+  ui.status = 'INITIATING TELESCREEN...';
   render();
   const scanner = ensureScanner();
   try {
@@ -149,7 +164,7 @@ const startScanning = async () => {
 const stopScanning = async () => {
   if (ui.scanner) await ui.scanner.stop();
   ui.phase = 'idle';
-  ui.status = 'Stopped';
+  ui.status = 'TELESCREEN OFFLINE';
   render();
 };
 
@@ -157,7 +172,7 @@ const updateStatus = () => {
   const el = root.querySelector('.status');
   if (!el) return;
   el.textContent = ui.status;
-  el.classList.toggle('flash', ui.status.startsWith('Found'));
+  el.classList.toggle('flash', ui.status.startsWith('ACQUIRED'));
 };
 
 const removeScan = (entry) => {
@@ -166,7 +181,7 @@ const removeScan = (entry) => {
   );
   if (index < 0) return;
   const label = entry.meta?.title || entry.isbn;
-  if (!confirm(`Delete "${label}"?`)) return;
+  if (!confirm(`REDACT "${label}" FROM RECORDS?`)) return;
   store.dispatch(makeCommand('REMOVE_SCAN', {
     from: { ...entry, index },
     to: null,
@@ -185,7 +200,7 @@ const exportJson = () => {
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = h('a', { href: url, download: `isbngrab-${new Date().toISOString().slice(0, 10)}.json` });
+  const a = h('a', { href: url, download: `1984-dossier-${new Date().toISOString().slice(0, 10)}.json` });
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -194,11 +209,11 @@ const exportJson = () => {
 
 const clearAll = () => {
   if (!store.state.scans.length) return;
-  if (!confirm(`Delete all ${store.state.scans.length} scans?`)) return;
+  if (!confirm(`PURGE ALL ${store.state.scans.length} RECORDS FROM ARCHIVE?`)) return;
   store.reset();
   ui.lastCapture = null;
   ui.phase = 'idle';
-  ui.status = 'Tap Start to begin';
+  ui.status = 'TELESCREEN STANDBY';
   render();
 };
 
@@ -208,26 +223,6 @@ const switchTab = async (next) => {
   ui.tab = next;
   render();
 };
-
-// ---------- rendering ----------
-
-const renderBar = () =>
-  h('div', { class: 'bar' },
-    h('h1', {}, 'ISBNGrab'),
-    h('span', { class: 'muted' }, `${store.state.scans.length} saved`),
-  );
-
-const renderTabs = () =>
-  h('div', { class: 'tabs', role: 'tablist' },
-    h('button', {
-      class: ui.tab === 'scan' ? 'active' : '',
-      onClick: () => switchTab('scan'),
-    }, 'Scan'),
-    h('button', {
-      class: ui.tab === 'list' ? 'active' : '',
-      onClick: () => switchTab('list'),
-    }, 'List'),
-  );
 
 const renderCover = (meta, cls = 'cover', size = 'M') => {
   if (!meta) return null;
@@ -240,27 +235,17 @@ const renderCover = (meta, cls = 'cover', size = 'M') => {
   return img;
 };
 
-const openDetail = (entry) => {
-  ui.selectedScan = entry;
-  render();
-};
-
-const closeDetail = () => {
-  ui.selectedScan = null;
-  render();
-};
+const openDetail = (entry) => { ui.selectedScan = entry; render(); };
+const closeDetail = () => { ui.selectedScan = null; render(); };
 
 const deleteFromDetail = (entry) => {
   const label = entry.meta?.title || entry.isbn;
-  if (!confirm(`Delete "${label}"?`)) return;
+  if (!confirm(`REDACT "${label}" FROM RECORDS?`)) return;
   const index = store.state.scans.findIndex(
     (x) => x.isbn === entry.isbn && x.t === entry.t,
   );
   if (index >= 0) {
-    store.dispatch(makeCommand('REMOVE_SCAN', {
-      from: { ...entry, index },
-      to: null,
-    }));
+    store.dispatch(makeCommand('REMOVE_SCAN', { from: { ...entry, index }, to: null }));
   }
   closeDetail();
 };
@@ -282,55 +267,85 @@ const renderModal = (entry) => {
         onClick: closeDetail,
       }, '×'),
       renderCover(m, 'cover-lg', 'L'),
-      h('div', { class: 'title-lg' }, m?.title || 'Untitled'),
+      h('div', { class: 'title-lg' }, m?.title || 'Untitled Subject'),
       m?.authors?.length
         ? h('div', { class: 'authors-lg' }, m.authors.join(', '))
         : null,
+      !m ? h('div', { class: 'no-record-stamp' }, 'No Ministry Record') : null,
       h('dl', { class: 'meta-list' },
         m?.publisher ? h('dt', {}, 'Publisher') : null,
         m?.publisher ? h('dd', {}, m.publisher) : null,
-        m?.year ? h('dt', {}, 'First published') : null,
+        m?.year ? h('dt', {}, 'First Published') : null,
         m?.year ? h('dd', {}, String(m.year)) : null,
         h('dt', {}, 'ISBN'),
         h('dd', { class: 'mono' }, entry.isbn),
-        h('dt', {}, 'Captured'),
+        h('dt', {}, 'Intercepted'),
         h('dd', {}, fmtTime(entry.t)),
-        olUrl ? h('dt', {}, 'Open Library') : null,
+        olUrl ? h('dt', {}, 'Cross-Reference') : null,
         olUrl ? h('dd', {},
           h('a', { href: olUrl, target: '_blank', rel: 'noreferrer noopener' },
             m.openLibraryKey),
         ) : null,
-        !m ? h('dt', {}, 'Metadata') : null,
-        !m ? h('dd', { class: 'muted' }, 'Not available') : null,
       ),
       h('div', { class: 'actions' },
-        h('button', { class: 'ghost', onClick: closeDetail }, 'Close'),
-        h('button', { class: 'danger', onClick: () => deleteFromDetail(entry) }, 'Delete'),
+        h('button', { class: 'ghost', onClick: closeDetail }, 'Dismiss'),
+        h('button', { class: 'danger', onClick: () => deleteFromDetail(entry) }, 'Redact'),
       ),
     ),
   );
 };
 
-const renderBookCard = (entry) => {
+// ──── rendering ──────────────────────────────────────────
+
+const renderBar = () =>
+  h('div', { class: 'bar' },
+    h('div', { class: 'brand' },
+      svgEye(),
+      h('h1', {}, '1984'),
+      h('span', { class: 'cursor', 'aria-hidden': 'true' }),
+    ),
+    h('span', {}),
+    h('div', { class: 'records' },
+      h('strong', {}, fmtDossierRef(store.state.scans.length)),
+      'On File',
+    ),
+  );
+
+const renderSubtitle = () =>
+  h('div', { class: 'subtitle' }, 'Big Brother Is Watching');
+
+const renderTabs = () =>
+  h('div', { class: 'tabs', role: 'tablist' },
+    h('button', {
+      class: ui.tab === 'scan' ? 'active' : '',
+      onClick: () => switchTab('scan'),
+    }, 'Telescreen'),
+    h('button', {
+      class: ui.tab === 'list' ? 'active' : '',
+      onClick: () => switchTab('list'),
+    }, 'Archive'),
+  );
+
+const renderBookCard = (entry, { stamp } = {}) => {
   const m = entry.meta;
   if (!m) {
     return h('div', { class: 'book-card no-meta' },
+      stamp ? h('div', { class: 'filed-stamp' }, stamp) : null,
       h('div', { class: 'info' },
         h('div', { class: 'title' }, entry.isbn),
-        h('div', { class: 'authors muted' }, 'No metadata found'),
+        h('div', { class: 'authors' }, 'No Ministry record on file.'),
       ),
     );
   }
   const pubBits = [m.publisher, m.year].filter(Boolean).join(' · ');
   return h('div', { class: 'book-card' },
+    stamp ? h('div', { class: 'filed-stamp' }, stamp) : null,
     renderCover(m, 'cover'),
     h('div', { class: 'info' },
       h('div', { class: 'title' }, m.title || entry.isbn),
-      m.authors?.length
-        ? h('div', { class: 'authors' }, m.authors.join(', '))
-        : null,
-      pubBits ? h('div', { class: 'pub muted' }, pubBits) : null,
-      h('div', { class: 'isbn-line muted' }, `ISBN ${entry.isbn}`),
+      m.authors?.length ? h('div', { class: 'authors' }, m.authors.join(', ')) : null,
+      pubBits ? h('div', { class: 'pub' }, pubBits) : null,
+      h('div', { class: 'isbn-line' }, `REF · ${entry.isbn}`),
     ),
   );
 };
@@ -339,6 +354,7 @@ const renderScan = () => {
   if (ui.phase === 'lookup') {
     return h('section', { class: 'scan' },
       h('div', { class: 'lookup-box' },
+        h('div', { class: 'ministry' }, 'Ministry of Truth · Archive Query'),
         h('div', { class: 'spinner' }),
         h('div', { class: 'status' }, ui.status),
       ),
@@ -348,35 +364,41 @@ const renderScan = () => {
   if (ui.phase === 'result' && ui.lastCapture) {
     return h('section', { class: 'scan' },
       ui.lastWasDuplicate
-        ? h('div', { class: 'duplicate-banner' }, 'Already in your list')
+        ? h('div', { class: 'duplicate-banner' }, 'Subject Already On Record')
         : null,
-      renderBookCard(ui.lastCapture),
+      renderBookCard(ui.lastCapture, {
+        stamp: ui.lastWasDuplicate ? 'On Record' : 'Filed',
+      }),
       h('div', { class: 'controls' },
-        h('button', { onClick: startScanning }, 'Scan another'),
+        h('button', { onClick: startScanning }, 'Next Subject'),
       ),
     );
   }
 
-  // idle or scanning
   const active = ui.phase === 'scanning';
   return h('section', { class: 'scan' },
     h('div', { class: `viewfinder ${active ? '' : 'idle'}` },
       getVideoEl(),
+      active ? h('div', { class: 'rec' }, 'REC') : null,
       active ? h('div', { class: 'reticle' },
-        h('span', { class: 'hint' }, 'Aim ISBN here'),
+        h('span', { class: 'hint' }, 'Focus Target'),
         h('span', { class: 'corner tl' }),
         h('span', { class: 'corner tr' }),
         h('span', { class: 'corner bl' }),
         h('span', { class: 'corner br' }),
       ) : null,
+      !active ? h('div', { class: 'idle-mark' },
+        h('span', {}, 'Telescreen Idle'),
+        h('span', {}, 'Awaiting Orders'),
+      ) : null,
     ),
     h('div', {
-      class: `status ${ui.status.startsWith('Found') ? 'flash' : ''}`,
+      class: `status ${ui.status.startsWith('ACQUIRED') ? 'flash' : ''}`,
     }, ui.status),
     h('div', { class: 'controls' },
       active
-        ? h('button', { class: 'ghost', onClick: stopScanning }, 'Stop')
-        : h('button', { onClick: startScanning }, 'Start camera'),
+        ? h('button', { class: 'ghost', onClick: stopScanning }, 'Cease')
+        : h('button', { onClick: startScanning }, 'Engage Telescreen'),
     ),
   );
 };
@@ -384,15 +406,16 @@ const renderScan = () => {
 const renderList = () => {
   const scans = [...store.state.scans].sort((a, b) => b.t - a.t);
   const body = scans.length
-    ? scans.map((s) =>
+    ? scans.map((s, idx) =>
         h('div', { class: 'row clickable', onClick: () => openDetail(s) },
+          h('span', { class: 'ref' }, `№ ${fmtDossierRef(scans.length - idx)}`),
           renderCover(s.meta, 'cover-sm'),
           h('div', { class: 'info' },
             h('span', { class: 'code' }, s.meta?.title || s.isbn),
             s.meta?.authors?.length
               ? h('span', { class: 'time' }, s.meta.authors.join(', '))
               : null,
-            h('span', { class: 'time' }, `${s.isbn} · ${fmtTime(s.t)}`),
+            h('span', { class: 'time' }, `${s.isbn} · Intercepted ${fmtTime(s.t)}`),
           ),
           h('button', {
             class: 'x',
@@ -400,27 +423,28 @@ const renderList = () => {
             onClick: (e) => { e.stopPropagation(); removeScan(s); },
           }, '×'),
         ))
-    : [h('div', { class: 'empty' }, 'No scans yet. Switch to the Scan tab to start.')];
+    : [h('div', { class: 'empty' },
+        'Archive Empty',
+        h('span', { class: 'sub' }, 'Awaiting first subject'),
+      )];
 
   return [
     h('section', { class: 'list' }, body),
     h('div', { class: 'list-actions' },
-      h('button', { disabled: !scans.length, onClick: exportJson }, 'Export JSON'),
-      h('button', { class: 'danger', disabled: !scans.length, onClick: clearAll }, 'Clear all'),
+      h('button', { disabled: !scans.length, onClick: exportJson }, 'Transmit Dossier'),
+      h('button', { class: 'danger', disabled: !scans.length, onClick: clearAll }, 'Purge Archive'),
     ),
   ];
 };
 
 const render = () => {
-  // Resync the selected entry from the store so the modal reflects the
-  // latest data, and auto-close if the entry was deleted elsewhere.
   if (ui.selectedScan) {
     const cur = store.state.scans.find(
       (x) => x.isbn === ui.selectedScan.isbn && x.t === ui.selectedScan.t,
     );
     ui.selectedScan = cur ?? null;
   }
-  const children = [renderBar(), renderTabs()];
+  const children = [renderBar(), renderSubtitle(), renderTabs()];
   if (ui.tab === 'scan') children.push(renderScan());
   else children.push(...renderList());
   if (ui.toast) children.push(h('div', { class: 'toast' }, ui.toast));
