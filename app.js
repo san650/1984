@@ -13,9 +13,20 @@ const getVideoEl = () => {
   if (!videoEl) {
     videoEl = document.createElement('video');
     videoEl.id = 'cam';
-    videoEl.autoplay = true;
+    // iOS Safari refuses inline autoplay of MediaStream sources unless
+    // muted / autoplay / playsinline are present as HTML attributes
+    // (not just JS properties). The legacy webkit-playsinline keeps
+    // older iOS happy. Setting both the attribute and the property is
+    // belt-and-suspenders for the various WebKit versions in the wild.
+    videoEl.setAttribute('muted', '');
+    videoEl.setAttribute('autoplay', '');
+    videoEl.setAttribute('playsinline', '');
+    videoEl.setAttribute('webkit-playsinline', '');
     videoEl.muted = true;
-    videoEl.setAttribute('playsinline', 'true');
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.controls = false;
+    videoEl.disablePictureInPicture = true;
   }
   return videoEl;
 };

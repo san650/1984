@@ -1,4 +1,4 @@
-const CACHE = '1984-v2';
+const CACHE = '1984-v3';
 
 const SHELL = [
   './',

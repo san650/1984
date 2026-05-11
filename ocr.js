@@ -49,9 +49,18 @@ export class IsbnScanner {
       throw err;
     }
     this.video.srcObject = this.stream;
-    this.video.setAttribute('playsinline', 'true');
+    // Re-assert the attributes in case anything stripped them, then play.
+    // iOS sometimes rejects the first play() right after srcObject
+    // assignment; a single retry on the next tick is usually enough.
+    this.video.setAttribute('playsinline', '');
+    this.video.setAttribute('webkit-playsinline', '');
     this.video.muted = true;
-    await this.video.play().catch(() => {});
+    try {
+      await this.video.play();
+    } catch {
+      await new Promise((r) => setTimeout(r, 60));
+      try { await this.video.play(); } catch {}
+    }
 
     this.onStatus('CALIBRATING OPTICS...');
     await this.#ensureWorker();
