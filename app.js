@@ -389,7 +389,7 @@ const renderScan = () => {
   const active = ui.phase === 'scanning';
   return h('section', { class: 'scan' },
     h('div', { class: `viewfinder ${active ? '' : 'idle'}` },
-      getVideoEl(),
+      active ? getVideoEl() : null,
       active ? h('div', { class: 'rec' }, 'REC') : null,
       active ? h('div', { class: 'reticle' },
         h('span', { class: 'hint' }, 'Focus Target'),

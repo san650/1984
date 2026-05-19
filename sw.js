@@ -1,4 +1,4 @@
-const CACHE = '1984-v3';
+const CACHE = '1984-v4';
 
 const SHELL = [
   './',
@@ -42,7 +42,9 @@ const SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((c) => c.addAll(SHELL.map((url) => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
