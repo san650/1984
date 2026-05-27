@@ -77,6 +77,100 @@ const scanForValidIsbn = (raw, { allowTen = true } = {}) => {
   return null;
 };
 
+// ──── conversion + hyphenation ──────────────────────────
+//
+// ISBN-13 ↔ ISBN-10 conversion only works for 978-prefixed codes;
+// the 979 block has no ISBN-10 equivalent.
+//
+// Hyphenation accuracy depends on the ISBN registration agency's range
+// tables. We embed proper rules for the English-language groups
+// (978-0, 978-1) which cover the vast majority of books seen by this
+// app. Other groups fall back to a simple prefix/group/body/check split,
+// which is still readable even if not strictly canonical.
+
+const isbn10Check = (nine) => {
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += +nine[i] * (10 - i);
+  const r = (11 - (sum % 11)) % 11;
+  return r === 10 ? 'X' : String(r);
+};
+
+const isbn13Check = (twelve) => {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += +twelve[i] * (i % 2 === 0 ? 1 : 3);
+  return String((10 - (sum % 10)) % 10);
+};
+
+export const toIsbn13 = (isbn) => {
+  if (!isbn) return null;
+  if (isbn.length === 13) return isbn;
+  if (isbn.length !== 10) return null;
+  const body = '978' + isbn.slice(0, 9);
+  return body + isbn13Check(body);
+};
+
+export const toIsbn10 = (isbn) => {
+  if (!isbn) return null;
+  if (isbn.length === 10) return isbn;
+  if (isbn.length !== 13 || !isbn.startsWith('978')) return null;
+  const body = isbn.slice(3, 12);
+  return body + isbn10Check(body);
+};
+
+// Registrant length rules for English-language groups.
+// Each entry: [min, max, registrantLength] where min/max are the 7-digit
+// number formed by the digits after the group identifier, left-aligned.
+const REGISTRANT_RULES = {
+  '0': [
+    [0,       1999999, 2],
+    [2000000, 6999999, 3],
+    [7000000, 8499999, 4],
+    [8500000, 8999999, 5],
+    [9000000, 9499999, 6],
+    [9500000, 9999999, 7],
+  ],
+  '1': [
+    [0,        999999, 2],
+    [1000000, 3999999, 3],
+    [4000000, 5499999, 4],
+    [5500000, 8649999, 5],
+    [8650000, 9989999, 6],
+    [9990000, 9999999, 7],
+  ],
+};
+
+const registrantLen = (group, afterGroup) => {
+  const rules = REGISTRANT_RULES[group];
+  if (!rules) return null;
+  const key = +((afterGroup + '0000000').slice(0, 7));
+  for (const [min, max, len] of rules) {
+    if (key >= min && key <= max) return len;
+  }
+  return null;
+};
+
+export const formatIsbn = (isbn) => {
+  if (!isbn) return isbn;
+  if (isbn.length === 13) {
+    const prefix = isbn.slice(0, 3);
+    const group = isbn[3];
+    const rest = isbn.slice(4, 12);
+    const check = isbn[12];
+    const regLen = registrantLen(group, rest);
+    if (regLen == null) return `${prefix}-${group}-${rest}-${check}`;
+    return `${prefix}-${group}-${rest.slice(0, regLen)}-${rest.slice(regLen)}-${check}`;
+  }
+  if (isbn.length === 10) {
+    const group = isbn[0];
+    const rest = isbn.slice(1, 9);
+    const check = isbn[9];
+    const regLen = registrantLen(group, rest);
+    if (regLen == null) return `${group}-${rest}-${check}`;
+    return `${group}-${rest.slice(0, regLen)}-${rest.slice(regLen)}-${check}`;
+  }
+  return isbn;
+};
+
 export const extractIsbn = (raw) => {
   if (!raw) return null;
 

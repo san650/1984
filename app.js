@@ -2,6 +2,7 @@ import { store } from './store.js';
 import { makeCommand } from './commands.js';
 import { IsbnScanner } from './ocr.js';
 import { lookupIsbn } from './openlibrary.js';
+import { toIsbn13, toIsbn10, formatIsbn } from './isbn.js';
 
 const root = document.getElementById('view');
 
@@ -264,6 +265,8 @@ const deleteFromDetail = (entry) => {
 const renderModal = (entry) => {
   const m = entry.meta;
   const olUrl = m?.openLibraryKey ? `https://openlibrary.org${m.openLibraryKey}` : null;
+  const isbn13 = toIsbn13(entry.isbn);
+  const isbn10 = toIsbn10(entry.isbn);
   const stop = (e) => e.stopPropagation();
   return h('div', {
     class: 'modal-backdrop',
@@ -288,8 +291,10 @@ const renderModal = (entry) => {
         m?.publisher ? h('dd', {}, m.publisher) : null,
         m?.year ? h('dt', {}, 'First Published') : null,
         m?.year ? h('dd', {}, String(m.year)) : null,
-        h('dt', {}, 'ISBN'),
-        h('dd', { class: 'mono' }, entry.isbn),
+        isbn13 ? h('dt', {}, 'ISBN-13') : null,
+        isbn13 ? h('dd', { class: 'mono' }, formatIsbn(isbn13)) : null,
+        isbn10 ? h('dt', {}, 'ISBN-10') : null,
+        isbn10 ? h('dd', { class: 'mono' }, formatIsbn(isbn10)) : null,
         h('dt', {}, 'Intercepted'),
         h('dd', {}, fmtTime(entry.t)),
         olUrl ? h('dt', {}, 'Cross-Reference') : null,
@@ -343,7 +348,7 @@ const renderBookCard = (entry, { stamp } = {}) => {
     return h('div', { class: 'book-card no-meta' },
       stamp ? h('div', { class: 'filed-stamp' }, stamp) : null,
       h('div', { class: 'info' },
-        h('div', { class: 'title' }, entry.isbn),
+        h('div', { class: 'title' }, formatIsbn(entry.isbn)),
         h('div', { class: 'authors' }, 'No Ministry record on file.'),
       ),
     );
@@ -356,7 +361,7 @@ const renderBookCard = (entry, { stamp } = {}) => {
       h('div', { class: 'title' }, m.title || entry.isbn),
       m.authors?.length ? h('div', { class: 'authors' }, m.authors.join(', ')) : null,
       pubBits ? h('div', { class: 'pub' }, pubBits) : null,
-      h('div', { class: 'isbn-line' }, `REF · ${entry.isbn}`),
+      h('div', { class: 'isbn-line' }, `REF · ${formatIsbn(entry.isbn)}`),
     ),
   );
 };
@@ -422,11 +427,11 @@ const renderList = () => {
           h('span', { class: 'ref' }, `№ ${fmtDossierRef(scans.length - idx)}`),
           renderCover(s.meta, 'cover-sm'),
           h('div', { class: 'info' },
-            h('span', { class: 'code' }, s.meta?.title || s.isbn),
+            h('span', { class: 'code' }, s.meta?.title || formatIsbn(s.isbn)),
             s.meta?.authors?.length
               ? h('span', { class: 'time' }, s.meta.authors.join(', '))
               : null,
-            h('span', { class: 'time' }, `${s.isbn} · Intercepted ${fmtTime(s.t)}`),
+            h('span', { class: 'time' }, `${formatIsbn(s.isbn)} · Intercepted ${fmtTime(s.t)}`),
           ),
           h('button', {
             class: 'x',
